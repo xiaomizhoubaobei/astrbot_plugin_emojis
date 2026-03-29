@@ -1,9 +1,9 @@
 from astrbot.api.event import filter
 from astrbot.api.all import *
-from typing import (Dict, Any, Optional, AnyStr, Callable, Union, Awaitable,Coroutine)
+from typing import (Dict, Any, Optional, AnyStr, Callable, Union, Awaitable, Coroutine)
 import os
 import json
-from data.plugins.astrbot_plugin_emoji import emoji
+from .utils import EmojiUtils
 from astrbot.api.provider import ProviderRequest
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import AiocqhttpMessageEvent
 from pathlib import Path
@@ -37,28 +37,28 @@ class Emoji(Star):
 
     @filter.command("摸头")
     async def emoji1(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "摸头")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "摸头")
         await event.send(data)
     @filter.command("感动哭了")
     async def emoji2(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "感动哭了")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "感动哭了")
         await event.send(data)
     @filter.command("膜拜")
     async def emoji3(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "膜拜")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "膜拜")
         await event.send(data)
     @filter.command("咬")
     async def emoji4(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "咬")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "咬")
         await event.send(data)
     @filter.command("可莉吃")
     async def emoji5(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "可莉吃")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "可莉吃")
         await event.send(data)
     # @filter.command("吃掉")
     # async def emoji6(self, event: AstrMessageEvent):
@@ -67,56 +67,56 @@ class Emoji(Star):
     #     await event.send(data)
     @filter.command("捣")
     async def emoji7(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "捣")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "捣")
         await event.send(data)
     @filter.command("咸鱼")
     async def emoji8(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "咸鱼")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "咸鱼")
         await event.send(data)
     @filter.command("玩")
     async def emoji9(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "玩")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "玩")
         await event.send(data)
     @filter.command("拍")
     async def emoji11(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "拍")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "拍")
         await event.send(data)
     @filter.command("丢")
     async def emoji12(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "丢")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "丢")
         await event.send(data)
     @filter.command("撕")
     async def emoji13(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "撕")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "撕")
         await event.send(data)
     @filter.command("求婚")
     async def emoji14(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "求婚")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "求婚")
         await event.send(data)
     @filter.command("爬")
     async def emoji15(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "爬")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "爬")
         await event.send(data)
     @filter.command("你可能需要他")
     async def emoji16(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "你可能需要他")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "你可能需要他")
         await event.send(data)
     @filter.command("想看")
     async def emoji17(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "想看")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "想看")
         await event.send(data)
     @filter.command("点赞")
     async def emoji18(self, event: AstrMessageEvent):
-        ids = await emoji.parse_target(event)
-        data = await emoji.fetch_image(ids, "点赞")
+        ids = await EmojiUtils.parse_target(event)
+        data = await EmojiUtils.fetch_image(ids, "点赞")
         await event.send(data)
