@@ -18,9 +18,9 @@ MERGE_TIMEOUT = 60  # 同一用户消息合并时间窗口（秒）
 
 
 
-@register("astrbot_plugin_emoji", "KurisuRee7", 
-          "发送指令@小伙伴以创建一个表情包",
-          "v1.0.0", "repo url")
+@register("astrbot_plugin_emojis", "祁筱欣",
+          "一个表情包创建插件",
+          "v0.0.1", "https://github.com/xiaomizhoubaobei/astrbot_plugin_emojis.git")
 class Emoji(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
