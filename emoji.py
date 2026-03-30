@@ -56,7 +56,12 @@ async def fetch_image(qq_number, flag):
                     result.chain = [Image.fromBytes(image_data)]
                     return result
                 else:
-                    result.chain = [Plain(f"表情包制作失败，状态码: {response.status}")]
+                    # 获取服务端返回的错误信息
+                    try:
+                        error_text = await response.text()
+                    except Exception:
+                        error_text = response.reason
+                    result.chain = [Plain(f"表情包制作失败，状态码: {response.status}，错误信息: {error_text}")]
                     return result
     except aiohttp.ClientError as e:
         result.chain = [Plain(f"请求异常: {e}")]
