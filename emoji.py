@@ -35,8 +35,9 @@ async def fetch_image(qq_number, flag):
     # 获取对应的URL
     url = switch_dict.get(flag)
     if not url:
+        supported_flags = "，".join(switch_dict.keys())
         result = MessageChain()
-        result.chain = [Plain("不支持的表情类型")]
+        result.chain = [Plain(f"不支持的表情类型，支持的表情类型有：{supported_flags}")]
         return result
     params = {
         'QQ': qq_number
