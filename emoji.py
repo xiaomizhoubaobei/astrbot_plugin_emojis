@@ -70,10 +70,10 @@ async def fetch_image(qq_number, flag):
 async def parse_target(event):
     """解析@目标或用户名"""
     for comp in event.message_obj.message:
-        if isinstance(comp, At) and event.get_self_id() != str(comp.qq):
-            # if str(comp.qq) == str(event.get_self_id()):
-            #     selected_text = random.choice(self_text)
-            #     yield event.plain_result(selected_text)
-            #     return
+        if isinstance(comp, At):
+            if str(comp.qq) == str(event.get_self_id()):
+                selected_text = random.choice(self_text)
+                yield event.plain_result(selected_text)
+                return
             return str(comp.qq)
     return None
