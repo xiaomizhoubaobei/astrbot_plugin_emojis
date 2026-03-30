@@ -1,19 +1,6 @@
-from astrbot.api.event import filter
-from astrbot.api.all import *
-from typing import (Dict, Any, Optional, AnyStr, Callable, Union, Awaitable,Coroutine)
-import os
-import json
-from data.plugins.astrbot_plugin_emoji import emoji
-from astrbot.api.provider import ProviderRequest
-from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import AiocqhttpMessageEvent
-from pathlib import Path
-from typing import Dict, List
-from astrbot.api.all import *
 from astrbot.api.event import filter, AstrMessageEvent
-import random
-MESSAGE_BUFFER: Dict[str, List[dict]] = {}  # {group_id: [{"user_id": str, "messages": list}, ...]}
-BUFFER_LIMIT = 2  # 一问一答的对话对数量
-MERGE_TIMEOUT = 60  # 同一用户消息合并时间窗口（秒）
+from astrbot.api.all import *
+from data.plugins.astrbot_plugin_emoji import emoji
 
 
 

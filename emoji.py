@@ -1,5 +1,4 @@
 from astrbot.api.all import *
-import requests
 import random
 import aiohttp
 
