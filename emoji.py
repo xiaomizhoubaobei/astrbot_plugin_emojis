@@ -33,7 +33,11 @@ async def fetch_image(qq_number, flag):
         "点赞": "https://api.lolimi.cn/API/zan/api.php",
     }
     # 获取对应的URL
-    url = switch_dict.get(flag, '')
+    url = switch_dict.get(flag)
+    if not url:
+        result = MessageChain()
+        result.chain = [Plain("不支持的表情类型")]
+        return result
     params = {
         'QQ': qq_number
     }
