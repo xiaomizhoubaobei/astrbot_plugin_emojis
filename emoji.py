@@ -3,6 +3,8 @@ import random
 import aiohttp
 import os
 
+# 自我防御回复语料
+# Closes #32
 self_text = [
     "那种事情不可以😣",
     "灰唁要被玩坏了😖",
@@ -71,9 +73,12 @@ async def parse_target(event):
     """解析@目标或用户名"""
     for comp in event.message_obj.message:
         if isinstance(comp, At):
+            # 检查是否是@机器人自己
             if str(comp.qq) == str(event.get_self_id()):
+                # 激活自我防御逻辑：随机选择一条回复语料
                 selected_text = random.choice(self_text)
                 yield event.plain_result(selected_text)
                 return
+            # 否则返回被@的用户QQ号
             return str(comp.qq)
     return None
