@@ -47,14 +47,8 @@ async def fetch_image(qq_number, flag):
                 if response.status == 200:
                     # 读取图片内容
                     image_data = await response.read()
-                    # 将图片保存到本地
-                    # 动态计算相对项目根目录的路径
-                    save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "plugins", "astrbot_plugin_emoji", "petemoji.gif")
-                    save_path = os.path.normpath(save_path)
-                    with open(save_path, "wb") as file:
-                        file.write(image_data)
-                    # 构造返回结果
-                    result.chain = [Image.fromFileSystem("./data/plugins/astrbot_plugin_emoji/petemoji.gif")]
+                    # 构造返回结果（直接使用网络图片数据）
+                    result.chain = [Image.fromBytes(image_data)]
                     return result
                 else:
                     result.chain = [Plain(f"表情包制作失败，状态码: {response.status}")]
