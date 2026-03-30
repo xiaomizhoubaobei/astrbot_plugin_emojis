@@ -1,6 +1,7 @@
 from astrbot.api.all import *
 import random
 import aiohttp
+import os
 
 self_text = [
     "那种事情不可以😣",
@@ -47,7 +48,10 @@ async def fetch_image(qq_number, flag):
                     # 读取图片内容
                     image_data = await response.read()
                     # 将图片保存到本地
-                    with open("./data/plugins/astrbot_plugin_emoji/petemoji.gif", "wb") as file:
+                    # 动态计算相对项目根目录的路径
+                    save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "plugins", "astrbot_plugin_emoji", "petemoji.gif")
+                    save_path = os.path.normpath(save_path)
+                    with open(save_path, "wb") as file:
                         file.write(image_data)
                     # 构造返回结果
                     result.chain = [Image.fromFileSystem("./data/plugins/astrbot_plugin_emoji/petemoji.gif")]
