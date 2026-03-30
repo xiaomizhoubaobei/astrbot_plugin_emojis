@@ -2,6 +2,8 @@ from astrbot.api.all import *
 import random
 import aiohttp
 import os
+import json
+import asyncio
 
 # 自我防御回复语料
 # Closes #32
@@ -24,52 +26,37 @@ self_text = [
     "灰唁已进入傲娇模式：哼！😾"
 ]
 
+def load_api_config():
+    """从 api_config.json 加载 API 映射表"""
+    config_path = os.path.join(os.path.dirname(__file__), 'api_config.json')
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        # 如果读取失败，返回空 dict
+        return {}
+
 async def fetch_image(qq_number, flag):
-    # 定义字典映射
+    # 每次调用重新读取配置，实现热更新
+    switch_dict = load_api_config()
     print(f"[DEBUG] 请求参数: QQ={qq_number}, Flag={flag}")
-    switch_dict = {
-        "摸头": "https://api.lolimi.cn/API/face_petpet/api.php",
-        "感动哭了": "https://api.lolimi.cn/API/face_touch/api.php",
-        "膜拜": "https://api.lolimi.cn/API/face_worship/api.php",
-        "咬": "https://api.lolimi.cn/API/face_suck/api.php",
-        "可莉吃": "https://api.lolimi.cn/API/chi/api.php",
-        "捣": "https://api.lolimi.cn/API/face_pound/api.php",
-        "咸鱼": "https://api.lolimi.cn/API/face_yu/api.php",
-        "玩": "https://api.lolimi.cn/API/face_play/api.php",
-        "拍": "https://api.lolimi.cn/API/face_pat/api.php",
-        "丢": "https://api.lolimi.cn/API/diu/api.php",
-        "撕": "https://api.lolimi.cn/API/si/api.php",
-        "求婚": "https://api.lolimi.cn/API/face_propose/api.php",
-        "爬": "https://api.lolimi.cn/API/pa/api.php",
-        "你可能需要他": "https://api.lolimi.cn/API/face_need/api.php",
-        "想看": "https://api.lolimi.cn/API/face_thsee/api.php",
-        "点赞": "https://api.lolimi.cn/API/zan/api.php",
-    }
-    # 获取对应的URL
     url = switch_dict.get(flag)
     if not url:
         supported_flags = "，".join(switch_dict.keys())
         result = MessageChain()
         result.chain = [Plain(f"不支持的表情类型，支持的表情类型有：{supported_flags}")]
         return result
-    params = {
-        'QQ': qq_number
-    }
+    params = {'QQ': qq_number}
     result = MessageChain()
     result.chain = []
     try:
-        # 使用 aiohttp 发送异步 GET 请求
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
-                # 检查请求是否成功
                 if response.status == 200:
-                    # 读取图片内容
                     image_data = await response.read()
-                    # 构造返回结果（直接使用网络图片数据）
                     result.chain = [Image.fromBytes(image_data)]
                     return result
                 else:
-                    # 获取服务端返回的错误信息
                     try:
                         error_text = await response.text()
                     except Exception:
