@@ -28,7 +28,7 @@ class Emojis(Star):
         self.config = config
 
     @filter.command("表情包")
-    async def list(self, event: AstrMessageEvent):
+    async def list_commands(self, event: AstrMessageEvent):
         cmds = " ".join(EMOJI_COMMANDS)
         yield event.plain_result(
             "指令格式：@本机器人 指令@xx

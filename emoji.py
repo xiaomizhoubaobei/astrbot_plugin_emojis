@@ -3,7 +3,6 @@ import random
 import aiohttp
 import os
 import json
-import asyncio
 
 # 自我防御回复语料
 # Closes #32
