@@ -39,6 +39,11 @@ class Emojis(Star):
     async def _handle_emoji(self, event: AstrMessageEvent, command_name: str):
         """通用表情包处理方法，所有表情包命令共用此逻辑"""
         ids = await emoji.parse_target(event)
+        if not ids:
+            msg = MessageChain()
+            msg.chain = [Plain("请@一个用户来制作表情包哦～")]
+            await event.send(msg)
+            return
         data = await emoji.fetch_image(ids, command_name)
         await event.send(data)
 
