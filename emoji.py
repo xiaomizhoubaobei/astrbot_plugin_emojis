@@ -1,8 +1,9 @@
-from astrbot.api.all import *
-import random
-import aiohttp
-import os
 import json
+import os
+import random
+
+import aiohttp
+from astrbot.api.all import *
 
 # 自我防御回复语料
 # Closes #32
@@ -22,18 +23,20 @@ self_text = [
     "检测到调皮能量超标，开启可爱护盾💖",
     "灰唁拒绝接受奇怪指令🙈",
     "再这样我要呼叫管理员啦👮",
-    "灰唁已进入傲娇模式：哼！😾"
+    "灰唁已进入傲娇模式：哼！😾",
 ]
+
 
 def load_api_config():
     """从 api_config.json 加载 API 映射表"""
-    config_path = os.path.join(os.path.dirname(__file__), 'api_config.json')
+    config_path = os.path.join(os.path.dirname(__file__), "api_config.json")
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception as e:
+    except Exception:
         # 如果读取失败，返回空 dict
         return {}
+
 
 async def fetch_image(qq_number, flag):
     # 每次调用重新读取配置，实现热更新
@@ -45,7 +48,7 @@ async def fetch_image(qq_number, flag):
         result = MessageChain()
         result.chain = [Plain(f"不支持的表情类型，支持的表情类型有：{supported_flags}")]
         return result
-    params = {'QQ': qq_number}
+    params = {"QQ": qq_number}
     result = MessageChain()
     result.chain = []
     try:
@@ -60,11 +63,16 @@ async def fetch_image(qq_number, flag):
                         error_text = await response.text()
                     except Exception:
                         error_text = response.reason
-                    result.chain = [Plain(f"表情包制作失败，状态码: {response.status}，错误信息: {error_text}")]
+                    result.chain = [
+                        Plain(
+                            f"表情包制作失败，状态码: {response.status}，错误信息: {error_text}"
+                        )
+                    ]
                     return result
     except aiohttp.ClientError as e:
         result.chain = [Plain(f"请求异常: {e}")]
         return result
+
 
 async def parse_target(event):
     """解析@目标或用户名"""
