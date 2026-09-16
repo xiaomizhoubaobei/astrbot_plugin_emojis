@@ -95,3 +95,19 @@ python3 scripts/contract_astrbot_plugin.py get-evidence-detail \
 
 *存证由 [XMZZUZHI/chain-contracts](https://cnb.cool/XMZZUZHI/chain-contracts) 的
 `AstrBotPluginDeposit` 合约与 `scripts/contract_astrbot_plugin.py` 脚本完成。*
+
+## 🤖 自动存证流水线（GitHub Actions）
+
+自本仓库接入 `.github/workflows/onchain-deposit.yml` 起，**发布 tag / 创建 Release** 时会
+自动把「版本发布」存证上链，无需再人工补录：
+
+| 项 | 说明 |
+|----|------|
+| 触发 | `release: published` / `push tag v*` / 手动 `workflow_dispatch` |
+| 真源 | 流水线运行在 GitHub 镜像仓库内，`tag` / `commit` 直接可读 |
+| 摘要 | `git archive --format=tar <tag> \| sha256sum`（确定性 tar，跨环境可复现） |
+| 合约 | `AstrBotPluginDeposit`，类别 `ReleasePublish` |
+| 结果 | 写入 Actions **Job Summary**（tag / commit / digest / 交易 hash），可链上核验 |
+
+> 需要在仓库 `Settings → Secrets` 配置 `ANTCHAIN_*` 与 `RSA_PRIVATE_KEY`；
+> 缺凭证时流水线会告警并跳过（不静默失败），配置完成后可手动补录。
