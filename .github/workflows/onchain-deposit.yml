@@ -1,0 +1,194 @@
+name: On-chain Attestation (Tag / Release)
+
+# 触发条件：发布 tag 或创建 GitHub Release 时，自动把「版本发布」存证到蚂蚁链。
+#
+# - release: types: [published]  → 发布 Release 时触发（会自动带上 tag）
+# - push: tags: ['v*']           → 直接推送语义化版本 tag 时触发（兜底，避免只打 tag 漏存证）
+# - workflow_dispatch            → 允许手动补录（可指定 tag）
+#
+# 设计要点：
+#   1. 真源在「本仓库」——workflow 就运行在 GitHub 镜像仓库内，tag / commit 直接可读，
+#      无需再去 clone 镜像，天然规避「CNB 侧无 tag」的问题。
+#   2. digest 取「确定性 tar 归档」SHA256（git archive --format=tar <tag>），
+#      任何环境可复现；zip / tar.gz 含时间戳，故不采用。
+#   3. 复用 chain-contracts 的存证脚本与合约，不在此仓库重复实现上链逻辑。
+#   4. 链上凭证全部走 GitHub Secrets，绝不落库。
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要存证的 tag（留空则用当前 ref / 最新 tag）'
+        required: false
+        default: ''
+
+# 同一 tag 只跑一次，避免 release + push tag 双触发重复存证
+concurrency:
+  group: onchain-deposit-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # chain-contracts 仓库（存证脚本 + 合约真源）
+  CHAIN_CONTRACTS_REPO: https://cnb.cool/XMZZUZHI/chain-contracts.git
+  # 本插件在 XMZZUZHI/Astrbot 组织下的仓库路径（与 workflow 所在仓库一致）
+  ASTRBOT_GROUP: XMZZUZHI/Astrbot
+  # 合约名（AstrBotPluginDeposit）
+  CONTRACT_NAME: AstrBotPluginDeposit
+
+jobs:
+  attest:
+    name: 版本发布链上存证
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 加固运行器
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
+
+      # 1. 检出本插件仓库（完整历史 + tags，用于定位 tag 对应 commit 并计算 digest）
+      - name: 检出插件仓库
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      # 2. 解析本次存证的 tag / commit / digest / 插件名
+      - name: 解析存证参数
+        id: info
+        run: |
+          set -euo pipefail
+
+          # ---- tag：优先 workflow_dispatch 输入 → release tag → 当前 ref ----
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then TAG="${{ github.event.release.tag_name }}"; fi
+          if [ -z "$TAG" ]; then TAG="${{ github.ref_name }}"; fi
+          # push tag 触发时 ref 形如 refs/tags/v0.0.1，兜底解析
+          TAG="${TAG##refs/tags/}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          # ---- commit：tag 指向的 commit（40 位 SHA，核心证据）----
+          git fetch --tags --force --prune
+          COMMIT="$(git rev-list -n 1 "$TAG")"
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
+
+          # ---- digest：确定性 tar 归档的 SHA256（跨环境可复现）----
+          DIGEST="$(git archive --format=tar "$TAG" | sha256sum | awk '{print $1}')"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+          # ---- 插件名：取 metadata.yaml 的 name（可能与仓库目录名不同）----
+          PLUGIN="$(grep -E '^name:' metadata.yaml | head -1 | awk '{print $2}' | tr -d '\"' | tr -d \"'\")"
+          if [ -z "$PLUGIN" ]; then PLUGIN="${{ github.event.repository.name }}"; fi
+          echo "plugin=$PLUGIN" >> "$GITHUB_OUTPUT"
+
+          # ---- 仓库路径：XMZZUZHI/Astrbot/<repo> ----
+          echo "repo=${ASTRBOT_GROUP}/${{ github.event.repository.name }}" >> "$GITHUB_OUTPUT"
+
+          echo "存证参数 → tag=$TAG commit=$COMMIT digest=$DIGEST plugin=$PLUGIN"
+
+      # 3. 检出 chain-contracts（取存证脚本与合约编译产物）
+      - name: 检出 chain-contracts
+        id: checkout-chain
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: XMZZUZHI/chain-contracts
+          ref: main
+          path: chain-contracts
+        continue-on-error: true
+
+      # 3b. 若 GitHub 上取不到（跨平台镜像），回退从 CNB 克隆
+      - name: 回退克隆 chain-contracts（CNB）
+        if: steps.checkout-chain.outcome == 'failure'
+        run: |
+          git clone --depth 1 "$CHAIN_CONTRACTS_REPO" chain-contracts || {
+            echo "::error::无法获取 chain-contracts（GitHub 与 CNB 均失败）"; exit 1; }
+
+      # 4. 安装依赖
+      - name: 安装 Python 依赖
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pycryptodome
+
+      # 5. 校验链上凭证是否齐备（缺失则友好失败，不静默）
+      - name: 校验链上凭证
+        env:
+          ANTCHAIN_ACCESS_ID: ${{ secrets.ANTCHAIN_ACCESS_ID }}
+          ANTCHAIN_BIZID: ${{ secrets.ANTCHAIN_BIZID }}
+          ANTCHAIN_TENANTID: ${{ secrets.ANTCHAIN_TENANTID }}
+          ANTCHAIN_MYKMS_KEY_ID: ${{ secrets.ANTCHAIN_MYKMS_KEY_ID }}
+          ANTCHAIN_ACCOUNT: ${{ secrets.ANTCHAIN_ACCOUNT }}
+          RSA_PRIVATE_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
+          RSA_PRIVATE_KEY_URL: ${{ secrets.RSA_PRIVATE_KEY_URL }}
+        run: |
+          missing=""
+          [ -z "${ANTCHAIN_ACCESS_ID:-}" ]   && missing="$missing ANTCHAIN_ACCESS_ID"
+          [ -z "${ANTCHAIN_BIZID:-}" ]       && missing="$missing ANTCHAIN_BIZID"
+          [ -z "${ANTCHAIN_TENANTID:-}" ]    && missing="$missing ANTCHAIN_TENANTID"
+          [ -z "${ANTCHAIN_MYKMS_KEY_ID:-}" ]&& missing="$missing ANTCHAIN_MYKMS_KEY_ID"
+          [ -z "${ANTCHAIN_ACCOUNT:-}" ]     && missing="$missing ANTCHAIN_ACCOUNT"
+          if [ -z "${RSA_PRIVATE_KEY:-}" ] && [ -z "${RSA_PRIVATE_KEY_URL:-}" ]; then
+            missing="$missing RSA_PRIVATE_KEY(or URL)"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::warning::缺少链上凭证 Secret:$missing —— 跳过存证（请在本仓库 Settings → Secrets 配置后重跑）"
+            echo "skip=true" >> "$GITHUB_ENV"
+          fi
+
+      # 6. 版本发布存证（核心步骤）
+      - name: 版本发布存证（depositReleasePublish）
+        if: env.skip != 'true'
+        env:
+          ANTCHAIN_ACCESS_ID: ${{ secrets.ANTCHAIN_ACCESS_ID }}
+          ANTCHAIN_BIZID: ${{ secrets.ANTCHAIN_BIZID }}
+          ANTCHAIN_TENANTID: ${{ secrets.ANTCHAIN_TENANTID }}
+          ANTCHAIN_MYKMS_KEY_ID: ${{ secrets.ANTCHAIN_MYKMS_KEY_ID }}
+          ANTCHAIN_ACCOUNT: ${{ secrets.ANTCHAIN_ACCOUNT }}
+          ANTCHAIN_GAS: ${{ vars.ANTCHAIN_GAS || '2000000' }}
+          RSA_PRIVATE_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
+          RSA_PRIVATE_KEY_URL: ${{ secrets.RSA_PRIVATE_KEY_URL }}
+        run: |
+          set -euo pipefail
+          cd chain-contracts
+          python3 scripts/contract_astrbot_plugin.py deposit-release-publish \
+            --repo "${{ steps.info.outputs.repo }}" \
+            --plugin "${{ steps.info.outputs.plugin }}" \
+            --tag "${{ steps.info.outputs.tag }}" \
+            --commit "${{ steps.info.outputs.commit }}" \
+            --digest "${{ steps.info.outputs.digest }}" \
+            --name "$CONTRACT_NAME" \
+            --receipt | tee deposit.log
+          # 从日志中提取交易 hash，供后续写回摘要
+          HASH="$(grep -A1 '版本发布存证交易 hash' deposit.log | tail -1 | tr -d '[:space:]' || true)"
+          echo "TX_HASH=$HASH" >> "$GITHUB_ENV"
+
+      # 7. 汇总存证结果（写入 Job Summary，便于公开核验）
+      - name: 汇总存证结果
+        if: always()
+        run: |
+          {
+            echo "## ⛓️ 链上存证结果"
+            echo ""
+            echo "| 项目 | 值 |"
+            echo "|------|-----|"
+            echo "| 触发事件 | ${{ github.event_name }} |"
+            echo "| 仓库 | \`${{ steps.info.outputs.repo }}\` |"
+            echo "| 插件名 | \`${{ steps.info.outputs.plugin }}\` |"
+            echo "| 版本 (tag) | \`${{ steps.info.outputs.tag }}\` |"
+            echo "| commit | \`${{ steps.info.outputs.commit }}\` |"
+            echo "| 产物摘要 (tar SHA256) | \`${{ steps.info.outputs.digest }}\` |"
+            echo "| 交易 hash | \`${TX_HASH:-（跳过或失败）}\` |"
+            echo ""
+            echo "> 链上核验：\`python3 scripts/contract_astrbot_plugin.py get-evidence-detail --id <ID> --name AstrBotPluginDeposit\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 缺少 Secret 时给出提示
+        if: env.skip == 'true'
+        run: |
+          echo "::notice::已跳过存证：请在本仓库配置 Secrets 后，用 workflow_dispatch 手动补录。"
